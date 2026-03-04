@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 export interface CompanyData {
   name: string;
@@ -37,16 +38,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const auth = localStorage.getItem('isAuthenticated');
-    if (auth === 'true') {
-      setIsAuthenticated(true);
-    }
-    
-    const storedCompany = localStorage.getItem('companyData');
-    if (storedCompany) {
-      setCompanyData(JSON.parse(storedCompany));
-    }
-    setIsLoaded(true);
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+      
+      const storedCompany = localStorage.getItem('companyData');
+      if (storedCompany) {
+        setCompanyData(JSON.parse(storedCompany));
+      }
+      setIsLoaded(true);
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -61,13 +72,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const login = () => {
     setIsAuthenticated(true);
-    localStorage.setItem('isAuthenticated', 'true');
     router.push('/');
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setIsAuthenticated(false);
-    localStorage.removeItem('isAuthenticated');
     router.push('/login');
   };
 

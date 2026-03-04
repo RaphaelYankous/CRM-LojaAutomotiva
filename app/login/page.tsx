@@ -3,20 +3,35 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Car, Lock, Mail } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const { login } = useAppContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple mock login
-    if (email === 'admin@admin.com' && password === 'admin') {
-      login();
-    } else {
-      setError('Credenciais inválidas. Use admin@admin.com / admin');
+    setLoading(true);
+    setError('');
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setError('Credenciais inválidas. Verifique seu e-mail e senha.');
+      } else if (data.session) {
+        login();
+      }
+    } catch (err) {
+      setError('Ocorreu um erro ao tentar fazer login.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -59,7 +74,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="block w-full pl-10 pr-3 py-3 border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-[#0a0a0a] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder="admin@admin.com"
+                    placeholder="seu@email.com"
                   />
                 </div>
               </div>
@@ -85,16 +100,12 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                disabled={loading}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Entrar
+                {loading ? 'Entrando...' : 'Entrar'}
               </button>
             </form>
-          </div>
-          <div className="px-8 py-4 bg-slate-50 dark:bg-[#0a0a0a] border-t border-slate-200 dark:border-slate-800 text-center">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Credenciais de teste: admin@admin.com / admin
-            </p>
           </div>
         </div>
       </div>
